@@ -1,0 +1,53 @@
+{
+  "name": "@ban-dal/os-bridge-darwin-x64",
+  "version": "1.0.0",
+  "cpu": [
+    "x64"
+  ],
+  "main": "os-bridge.darwin-x64.node",
+  "files": [
+    "os-bridge.darwin-x64.node"
+  ],
+  "description": "Native OS capability bridge for Node.js and Electron. Check notification permission status on macOS and Windows.",
+  "keywords": [
+    "os-bridge",
+    "native-os",
+    "native-permissions",
+    "notification-permission",
+    "notification-permissions",
+    "notification-status",
+    "system-permissions",
+    "desktop-permissions",
+    "electron",
+    "electron-notifications",
+    "node-native",
+    "native-addon",
+    "node-addon",
+    "node-api",
+    "napi-rs",
+    "NAPI",
+    "N-API",
+    "Rust",
+    "macos",
+    "windows"
+  ],
+  "homepage": "https://github.com/ban-dal/os-bridge#readme",
+  "license": "MIT",
+  "engines": {
+    "node": ">= 18.17.0 < 19 || >= 20.3.0 < 21 || >= 21.1.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/ban-dal/os-bridge.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ban-dal/os-bridge/issues"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  },
+  "os": [
+    "darwin"
+  ]
+}
