@@ -21,42 +21,36 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 jobs:
-  detect-version:
-    name: Detect version change
+  detect-publish:
+    name: Detect unpublished version
     runs-on: ubuntu-latest
     outputs:
-      changed: ${{ steps.version.outputs.changed }}
-      version: ${{ steps.version.outputs.version }}
-      previous_version: ${{ steps.version.outputs.previous_version }}
+      should_publish: ${{ steps.publish.outputs.should_publish }}
+      version: ${{ steps.publish.outputs.version }}
     steps:
       - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-      - name: Check package version
-        id: version
+      - name: Check npm package version
+        id: publish
         shell: bash
         run: |
+          PACKAGE_NAME="$(node -p "require('./package.json').name")"
           CURRENT_VERSION="$(node -p "require('./package.json').version")"
-          PREVIOUS_VERSION=""
 
-          if [ "${{ github.event_name }}" = "push" ] && [ -n "${{ github.event.before }}" ] && [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ];
+          if npm view "$PACKAGE_NAME@$CURRENT_VERSION" version --registry https://registry.npmjs.org/ >/tmp/npm-view.log 2>&1;
           then
-            if git cat-file -e "${{ github.event.before }}:package.json" 2>/dev/null;
-            then
-              PREVIOUS_VERSION="$(git show "${{ github.event.before }}:package.json" | node -p "JSON.parse(require('fs').readFileSync(0, 'utf8')).version")"
-            fi
-          fi
-
-          if [ -n "$PREVIOUS_VERSION" ] && [ "$PREVIOUS_VERSION" != "$CURRENT_VERSION" ];
+            echo "should_publish=false" >> "$GITHUB_OUTPUT"
+            echo "$PACKAGE_NAME@$CURRENT_VERSION is already published"
+          elif grep -q "E404" /tmp/npm-view.log;
           then
-            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "should_publish=true" >> "$GITHUB_OUTPUT"
+            echo "$PACKAGE_NAME@$CURRENT_VERSION is not published yet"
           else
-            echo "changed=false" >> "$GITHUB_OUTPUT"
+            cat /tmp/npm-view.log
+            exit 1
           fi
 
           echo "version=$CURRENT_VERSION" >> "$GITHUB_OUTPUT"
-          echo "previous_version=$PREVIOUS_VERSION" >> "$GITHUB_OUTPUT"
-          echo "Previous version: ${PREVIOUS_VERSION:-unknown}"
+          echo "Package: $PACKAGE_NAME"
           echo "Current version: $CURRENT_VERSION"
   lint:
     name: Lint
@@ -272,11 +266,11 @@ jobs:
       contents: write
       id-token: write
     needs:
-      - detect-version
+      - detect-publish
       - lint
       - test-macOS-windows-binding
       - test-linux-binding
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.detect-version.outputs.changed == 'true' }}
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.detect-publish.outputs.should_publish == 'true' }}
     steps:
       - uses: actions/checkout@v6
       - name: Setup pnpm
