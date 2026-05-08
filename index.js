@@ -576,5 +576,11 @@ if (!nativeBinding) {
 }
 
 module.exports = nativeBinding
+module.exports.getNotificationCapability = nativeBinding.getNotificationCapability
+module.exports.getNotificationFocusStatus = nativeBinding.getNotificationFocusStatus
+module.exports.getNotificationPermissionStatus = nativeBinding.getNotificationPermissionStatus
 module.exports.getPermissionStatus = nativeBinding.getPermissionStatus
+module.exports.NotificationFocusStatus = nativeBinding.NotificationFocusStatus
 module.exports.NotificationPermissionStatus = nativeBinding.NotificationPermissionStatus
+module.exports.NotificationUnavailableReason = nativeBinding.NotificationUnavailableReason
+module.exports.requestNotificationPermission = nativeBinding.requestNotificationPermission

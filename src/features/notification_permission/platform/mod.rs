@@ -5,12 +5,29 @@ mod macos;
 mod windows;
 
 #[cfg(target_os = "macos")]
-pub use macos::get_permission_status;
+pub use macos::{
+  get_notification_focus_status, get_permission_status, request_notification_permission,
+};
 
 #[cfg(target_os = "windows")]
-pub use windows::get_permission_status;
+pub use windows::{get_notification_focus_status, get_permission_status};
+
+#[cfg(target_os = "windows")]
+pub fn request_notification_permission(app_user_model_id: Option<String>) -> String {
+  get_permission_status(app_user_model_id)
+}
 
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
 pub fn get_permission_status(_app_user_model_id: Option<String>) -> String {
+  "unsupported".to_string()
+}
+
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
+pub fn get_notification_focus_status(_request_focus_authorization: bool) -> String {
+  "unsupported".to_string()
+}
+
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
+pub fn request_notification_permission(_app_user_model_id: Option<String>) -> String {
   "unsupported".to_string()
 }

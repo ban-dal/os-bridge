@@ -86,6 +86,7 @@ typings/
 # Nuxt.js build / generate output
 .nuxt
 dist
+electron-probe/renderer-dist
 
 # Gatsby files
 .cache/
@@ -127,3 +128,5 @@ Cargo.lock
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+
+dist-electron

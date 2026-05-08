@@ -31,16 +31,18 @@ Platform packages are optional dependencies. Always import from `@ban-dal/os-bri
 
 ## Feature Index
 
-| Feature                        | API                   | macOS     | Windows   | Linux         |
-| ------------------------------ | --------------------- | --------- | --------- | ------------- |
-| Notification permission status | `getPermissionStatus` | Supported | Supported | `unsupported` |
+| Feature                         | API                               | macOS     | Windows   | Linux         |
+| ------------------------------- | --------------------------------- | --------- | --------- | ------------- |
+| Notification permission status  | `getNotificationPermissionStatus` | Supported | Supported | `unsupported` |
+| Notification Focus status       | `getNotificationFocusStatus`      | Supported | Supported | `unsupported` |
+| Notification capability summary | `getNotificationCapability`       | Supported | Supported | `unsupported` |
 
 ## Usage
 
 ```ts
-import { getPermissionStatus, type NotificationPermissionStatus } from '@ban-dal/os-bridge'
+import { getNotificationCapability, type NotificationCapability } from '@ban-dal/os-bridge'
 
-const status: NotificationPermissionStatus = getPermissionStatus()
+const capability: NotificationCapability = getNotificationCapability()
 ```
 
 ## Features
@@ -48,7 +50,7 @@ const status: NotificationPermissionStatus = getPermissionStatus()
 ### Notification Permission Status
 
 ```ts
-function getPermissionStatus(appUserModelId?: string): NotificationPermissionStatus
+function getNotificationPermissionStatus(options?: NotificationDiagnosticsOptions): NotificationPermissionStatus
 ```
 
 ```ts
@@ -62,19 +64,62 @@ type NotificationPermissionStatus = 'granted' | 'denied' | 'not-determined' | 'l
 | Linux    | Returns `unsupported`.                                                                                      |
 
 ```ts
-import { getPermissionStatus } from '@ban-dal/os-bridge'
+import { getNotificationPermissionStatus } from '@ban-dal/os-bridge'
 
-const status = getPermissionStatus('com.example.my-app')
+const status = getNotificationPermissionStatus({ appUserModelId: 'com.example.my-app' })
 ```
 
 For Windows Electron apps, pass the same app user model id used with `app.setAppUserModelId(...)`.
+
+`getPermissionStatus(appUserModelId?)` remains available as the low-level compatibility alias.
+
+### Notification Focus Status
+
+```ts
+function getNotificationFocusStatus(options?: NotificationDiagnosticsOptions): NotificationFocusStatus
+```
+
+```ts
+type NotificationFocusStatus = 'active' | 'inactive' | 'unsupported' | 'unknown'
+```
+
+This API exposes the focus signal available to the native implementation. On macOS, it reads `INFocusStatusCenter` and returns `unknown` if the app cannot access Focus Status. On Windows 11, it reads `Windows.UI.Shell.FocusSessionManager`, which reports an active Focus session rather than the full notification suppression state; older or unsupported Windows versions return `unsupported` or `unknown`.
+
+Pass `{ requestFocusAuthorization: true }` from an app bundle on macOS to trigger the Focus Status authorization prompt before reading the status.
+
+### Notification Capability
+
+```ts
+function getNotificationCapability(options?: NotificationDiagnosticsOptions): NotificationCapability
+```
+
+```ts
+type NotificationCapability = {
+  canNotify: boolean
+  permission: NotificationPermissionStatus
+  focusStatus: NotificationFocusStatus
+  reasons: NotificationUnavailableReason[]
+}
+
+type NotificationUnavailableReason =
+  | 'permission-denied'
+  | 'permission-not-determined'
+  | 'missing-app-user-model-id'
+  | 'invalid-app-user-model-id'
+  | 'not-bundled-app'
+  | 'not-code-signed'
+  | 'unsupported-platform'
+  | 'unknown'
+```
+
+`canNotify` is based on platform support, notification permission, and platform-specific requirements such as the Windows app user model id. Focus status is returned as diagnostic context, but it is not treated as a definitive notification-blocking reason.
 
 #### Electron
 
 ```ts
 // main.ts
 import { app, ipcMain } from 'electron'
-import { getPermissionStatus } from '@ban-dal/os-bridge'
+import { getNotificationCapability } from '@ban-dal/os-bridge'
 
 const appUserModelId = 'com.example.my-app'
 
@@ -82,26 +127,26 @@ if (process.platform === 'win32') {
   app.setAppUserModelId(appUserModelId)
 }
 
-ipcMain.handle('notification:getPermissionStatus', () => {
-  return getPermissionStatus(appUserModelId)
+ipcMain.handle('notification:getCapability', () => {
+  return getNotificationCapability({ appUserModelId })
 })
 ```
 
 ```ts
 // preload.ts
 import { contextBridge, ipcRenderer } from 'electron'
-import type { NotificationPermissionStatus } from '@ban-dal/os-bridge'
+import type { NotificationCapability } from '@ban-dal/os-bridge'
 
 contextBridge.exposeInMainWorld('osBridge', {
-  getNotificationPermissionStatus: (): Promise<NotificationPermissionStatus> => {
-    return ipcRenderer.invoke('notification:getPermissionStatus')
+  getNotificationCapability: (): Promise<NotificationCapability> => {
+    return ipcRenderer.invoke('notification:getCapability')
   },
 })
 ```
 
 ```ts
 // renderer.ts
-const status = await window.osBridge.getNotificationPermissionStatus()
+const capability = await window.osBridge.getNotificationCapability()
 ```
 
 ## Adding Feature Documentation
@@ -117,3 +162,24 @@ pnpm install
 pnpm build
 pnpm test
 ```
+
+### Manual Electron Probe
+
+Use `electron-probe/` when you need to physically compare this package's diagnostics with the current OS notification and Focus state.
+
+```bash
+pnpm build
+cd electron-probe
+cp .env.example .env
+pnpm install
+pnpm dev
+```
+
+For macOS app-bundle testing:
+
+```bash
+cd electron-probe
+pnpm pack:mac
+```
+
+The probe can request macOS Focus Status access and includes `NSFocusStatusUsageDescription` in the packaged app. The macOS probe package is ad-hoc signed locally for manual testing.

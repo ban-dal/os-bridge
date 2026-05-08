@@ -1,3 +1,4 @@
+use windows::UI::Shell::FocusSessionManager;
 use winreg::enums::HKEY_CURRENT_USER;
 use winreg::RegKey;
 
@@ -7,6 +8,10 @@ pub fn get_permission_status(app_user_model_id: Option<String>) -> String {
   };
 
   read_registry_setting(&app_id).unwrap_or_else(|| "unknown".to_string())
+}
+
+pub fn get_notification_focus_status(_request_focus_authorization: bool) -> String {
+  read_focus_session_status().unwrap_or_else(|| "unknown".to_string())
 }
 
 fn read_registry_setting(app_id: &str) -> Option<String> {
@@ -24,6 +29,26 @@ fn read_registry_setting(app_id: &str) -> Option<String> {
       Some(0) => "denied",
       Some(_) => "granted",
       None => "granted",
+    }
+    .to_string(),
+  )
+}
+
+fn read_focus_session_status() -> Option<String> {
+  let is_supported = FocusSessionManager::IsSupported().ok()?;
+
+  if !is_supported {
+    return Some("unsupported".to_string());
+  }
+
+  let manager = FocusSessionManager::GetDefault().ok()?;
+  let is_focus_active = manager.IsFocusActive().ok()?;
+
+  Some(
+    if is_focus_active {
+      "active"
+    } else {
+      "inactive"
     }
     .to_string(),
   )

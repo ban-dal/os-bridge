@@ -3,7 +3,7 @@ use std::sync::mpsc;
 use std::time::Duration;
 
 use block::ConcreteBlock;
-use objc::runtime::{Object, BOOL, YES};
+use objc::runtime::{Class, Object, BOOL, YES};
 use objc::{class, msg_send, sel, sel_impl};
 
 const STATUS_NOT_DETERMINED: i64 = 0;
@@ -11,6 +11,13 @@ const STATUS_DENIED: i64 = 1;
 const STATUS_AUTHORIZED: i64 = 2;
 const STATUS_PROVISIONAL: i64 = 3;
 const STATUS_EPHEMERAL: i64 = 4;
+const FOCUS_STATUS_AUTHORIZED: i64 = 3;
+
+#[link(name = "Intents", kind = "framework")]
+extern "C" {}
+
+#[link(name = "UserNotifications", kind = "framework")]
+extern "C" {}
 
 pub fn get_permission_status(_app_user_model_id: Option<String>) -> String {
   if !is_app_bundle() {
@@ -18,6 +25,18 @@ pub fn get_permission_status(_app_user_model_id: Option<String>) -> String {
   }
 
   read_notification_settings().unwrap_or_else(|| "unknown".to_string())
+}
+
+pub fn get_notification_focus_status(request_focus_authorization: bool) -> String {
+  read_focus_status(request_focus_authorization).unwrap_or_else(|| "unknown".to_string())
+}
+
+pub fn request_notification_permission(_app_user_model_id: Option<String>) -> String {
+  if !is_app_bundle() {
+    return "unknown".to_string();
+  }
+
+  request_user_notification_authorization().unwrap_or_else(|| "unknown".to_string())
 }
 
 fn is_app_bundle() -> bool {
@@ -30,6 +49,28 @@ fn is_app_bundle() -> bool {
 
     is_app == YES
   }
+}
+
+fn request_user_notification_authorization() -> Option<String> {
+  let (sender, receiver) = mpsc::channel();
+
+  unsafe {
+    let center: *mut Object =
+      msg_send![class!(UNUserNotificationCenter), currentNotificationCenter];
+
+    let block = ConcreteBlock::new(move |_granted: BOOL, _error: *mut Object| {
+      let _ = sender.send(());
+    })
+    .copy();
+
+    let options: u64 = (1 << 0) | (1 << 1) | (1 << 2);
+    let _: () =
+      msg_send![center, requestAuthorizationWithOptions: options completionHandler: &*block];
+
+    receiver.recv_timeout(Duration::from_secs(30)).ok()?;
+  }
+
+  read_notification_settings()
 }
 
 fn read_notification_settings() -> Option<String> {
@@ -48,6 +89,62 @@ fn read_notification_settings() -> Option<String> {
     let _: () = msg_send![center, getNotificationSettingsWithCompletionHandler: &*block];
 
     receiver.recv_timeout(Duration::from_secs(5)).ok()
+  }
+}
+
+fn read_focus_status(request_focus_authorization: bool) -> Option<String> {
+  unsafe {
+    let center_class = Class::get("INFocusStatusCenter")?;
+    let center: *mut Object = msg_send![center_class, defaultCenter];
+
+    if center.is_null() {
+      return Some("unsupported:center-null".to_string());
+    }
+
+    let mut authorization_status: i64 = msg_send![center, authorizationStatus];
+
+    if authorization_status != FOCUS_STATUS_AUTHORIZED && request_focus_authorization {
+      authorization_status = request_focus_status_authorization(center)?;
+    }
+
+    if authorization_status != FOCUS_STATUS_AUTHORIZED {
+      return Some(format!("not-authorized:{}", authorization_status));
+    }
+
+    let focus_status: *mut Object = msg_send![center, focusStatus];
+
+    if focus_status.is_null() {
+      return Some("unknown:focus-status-null".to_string());
+    }
+
+    let is_focused_number: *mut Object = msg_send![focus_status, isFocused];
+
+    if is_focused_number.is_null() {
+      return Some("unknown:is-focused-null".to_string());
+    }
+
+    let is_focused: BOOL = msg_send![is_focused_number, boolValue];
+
+    Some(focus_active_status(is_focused == YES))
+  }
+}
+
+fn focus_active_status(is_active: bool) -> String {
+  if is_active { "active" } else { "inactive" }.to_string()
+}
+
+fn request_focus_status_authorization(center: *mut Object) -> Option<i64> {
+  let (sender, receiver) = mpsc::channel();
+
+  unsafe {
+    let block = ConcreteBlock::new(move |status: i64| {
+      let _ = sender.send(status);
+    })
+    .copy();
+
+    let _: () = msg_send![center, requestAuthorizationWithCompletionHandler: &*block];
+
+    receiver.recv_timeout(Duration::from_secs(30)).ok()
   }
 }
 
