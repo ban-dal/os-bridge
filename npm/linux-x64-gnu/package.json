@@ -1,6 +1,6 @@
 {
   "name": "@ban-dal/os-bridge-linux-x64-gnu",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "cpu": [
     "x64"
   ],
