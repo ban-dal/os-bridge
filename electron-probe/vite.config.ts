@@ -24,7 +24,7 @@ export default defineConfig(async () => ({
     tailwindcss(),
     await electron({
       main: {
-        entry: path.join(projectRoot, 'main.js'),
+        entry: path.join(projectRoot, 'main/index.ts'),
         vite: {
           build: {
             outDir: path.join(projectRoot, 'dist-electron'),
@@ -32,7 +32,7 @@ export default defineConfig(async () => ({
         },
       },
       preload: {
-        input: path.join(projectRoot, 'preload.js'),
+        input: path.join(projectRoot, 'main/preload.ts'),
         vite: {
           build: {
             outDir: path.join(projectRoot, 'dist-electron'),

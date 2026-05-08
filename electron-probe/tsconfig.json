@@ -16,5 +16,5 @@
     "noEmit": true,
     "jsx": "react-jsx"
   },
-  "include": ["renderer/**/*", "vite.config.ts"]
+  "include": ["renderer/**/*", "main/**/*.ts", "vite.config.ts"]
 }

@@ -5,7 +5,7 @@
   "description": "Manual Electron probe for @ban-dal/os-bridge notification diagnostics.",
   "author": "ban-dal",
   "productName": "OS Bridge Probe",
-  "main": "dist-electron/main.js",
+  "main": "dist-electron/index.js",
   "scripts": {
     "dev": "vite",
     "build": "tsc -p tsconfig.json && vite build",
@@ -25,7 +25,7 @@
     "@types/react-dom": "^19.2.3",
     "dotenv": "^16.4.7",
     "electron": "^33.3.1",
-    "electron-builder": "^25.1.8",
+    "electron-builder": "^26.8.1",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "typescript": "^6.0.0",
