@@ -62,7 +62,6 @@ pub enum NotificationUnavailableReason {
 #[napi(object)]
 pub struct NotificationDiagnosticsOptions {
   pub app_user_model_id: Option<String>,
-  pub platform: Option<String>,
   pub request_focus_authorization: Option<bool>,
 }
 
@@ -92,17 +91,15 @@ pub fn get_notification_permission_status(
 pub fn request_mac_notification_permission(
   options: Option<NotificationDiagnosticsOptions>,
 ) -> NotificationPermissionStatus {
-  let platform = resolve_platform(options.as_ref());
+  let platform = current_platform();
 
   if !is_supported_notification_platform(&platform) {
     NotificationPermissionStatus::Unsupported
-  } else if platform == current_platform() {
+  } else {
     features::notification_permission::request_notification_permission(
       options.and_then(|value| value.app_user_model_id),
     )
     .into()
-  } else {
-    NotificationPermissionStatus::Unknown
   }
 }
 
@@ -110,11 +107,11 @@ pub fn request_mac_notification_permission(
 pub fn get_notification_interruption_level(
   options: Option<NotificationDiagnosticsOptions>,
 ) -> NotificationInterruptionLevel {
-  let platform = resolve_platform(options.as_ref());
+  let platform = current_platform();
 
   if !is_supported_notification_platform(&platform) {
     NotificationInterruptionLevel::Unsupported
-  } else if platform == current_platform() {
+  } else {
     features::notification_permission::get_notification_interruption_level(
       options
         .as_ref()
@@ -122,8 +119,6 @@ pub fn get_notification_interruption_level(
         .unwrap_or(false),
     )
     .into()
-  } else {
-    NotificationInterruptionLevel::Unknown
   }
 }
 
@@ -131,7 +126,7 @@ pub fn get_notification_interruption_level(
 pub fn get_notification_capability(
   options: Option<NotificationDiagnosticsOptions>,
 ) -> NotificationCapability {
-  let platform = resolve_platform(options.as_ref());
+  let platform = current_platform();
   let permission = get_permission_status(
     options
       .as_ref()
@@ -146,7 +141,6 @@ impl Clone for NotificationDiagnosticsOptions {
   fn clone(&self) -> Self {
     Self {
       app_user_model_id: self.app_user_model_id.clone(),
-      platform: self.platform.clone(),
       request_focus_authorization: self.request_focus_authorization,
     }
   }
@@ -223,12 +217,6 @@ fn add_reason(
   if !reasons.contains(&reason) {
     reasons.push(reason);
   }
-}
-
-fn resolve_platform(options: Option<&NotificationDiagnosticsOptions>) -> String {
-  options
-    .and_then(|value| value.platform.clone())
-    .unwrap_or_else(current_platform)
 }
 
 fn current_platform() -> String {

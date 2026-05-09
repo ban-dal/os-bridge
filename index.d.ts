@@ -23,7 +23,6 @@ export interface NotificationCapability {
 
 export interface NotificationDiagnosticsOptions {
   appUserModelId?: string
-  platform?: string
   requestFocusAuthorization?: boolean
 }
 

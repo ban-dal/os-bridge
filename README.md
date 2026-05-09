@@ -101,7 +101,6 @@ type NotificationInterruptionLevel = 'normal' | 'limited' | 'unsupported' | 'unk
 ```ts
 type NotificationDiagnosticsOptions = {
   appUserModelId?: string
-  platform?: string
   requestFocusAuthorization?: boolean
 }
 ```
