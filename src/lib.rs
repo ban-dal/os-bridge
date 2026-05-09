@@ -61,22 +61,47 @@ pub enum NotificationUnavailableReason {
 
 #[napi(object)]
 pub struct NotificationDiagnosticsOptions {
+  /// Windows App User Model ID.
   pub app_user_model_id: Option<String>,
 }
 
 #[napi(object)]
 pub struct NotificationCapability {
+  /// Whether notifications can be sent.
+  ///
+  /// `ko`: 알림을 보낼 수 있는지 여부
   pub can_notify: bool,
+  /// Current notification permission status.
+  ///
+  /// `ko`: 현재 알림 권한 상태
   pub permission: NotificationPermissionStatus,
+  /// Current notification interruption level.
+  ///
+  /// `ko`: 현재 알림 전달 제한 상태
   pub interruption_level: NotificationInterruptionLevel,
+  /// Reasons notifications are unavailable.
+  ///
+  /// `ko`: 알림을 사용할 수 없는 사유
   pub reasons: Vec<NotificationUnavailableReason>,
 }
 
+/// Returns the notification permission status.
+///
+/// `ko`: 현재 알림 권한 상태를 반환합니다.
+///
+/// @param appUserModelId Windows App User Model ID used to look up per-app notification settings.
+///
+/// `ko`: appUserModelId 알림 설정 조회에 사용할 Windows App User Model ID입니다.
 #[napi(js_name = "getPermissionStatus")]
 pub fn get_permission_status(app_user_model_id: Option<String>) -> NotificationPermissionStatus {
   features::notification_permission::get_permission_status(app_user_model_id).into()
 }
 
+/// Returns the notification permission status.
+///
+/// `ko`: 현재 알림 권한 상태를 반환합니다.
+///
+/// @param options
 #[napi(js_name = "getNotificationPermissionStatus")]
 pub fn get_notification_permission_status(
   options: Option<NotificationDiagnosticsOptions>,
@@ -86,6 +111,11 @@ pub fn get_notification_permission_status(
   get_permission_status(app_user_model_id)
 }
 
+/// Requests macOS notification authorization.
+///
+/// `ko`: macOS 알림 권한을 요청하고 결과 상태를 반환합니다.
+///
+/// @param options
 #[napi(js_name = "requestMacNotificationPermission")]
 pub fn request_mac_notification_permission(
   options: Option<NotificationDiagnosticsOptions>,
@@ -102,6 +132,9 @@ pub fn request_mac_notification_permission(
   }
 }
 
+/// Returns the current notification interruption level.
+///
+/// `ko`: 현재 알림 전달 제한 상태를 반환합니다.
 #[napi(js_name = "getNotificationInterruptionLevel")]
 pub fn get_notification_interruption_level() -> NotificationInterruptionLevel {
   let platform = current_platform();
@@ -113,6 +146,9 @@ pub fn get_notification_interruption_level() -> NotificationInterruptionLevel {
   }
 }
 
+/// Requests macOS Focus Status authorization.
+///
+/// `ko`: macOS 집중 모드 상태 접근 권한을 요청합니다.
 #[napi(js_name = "requestMacFocusStatusAuthorization")]
 pub fn request_mac_focus_status_authorization() -> NotificationInterruptionLevel {
   if current_platform() != "darwin" {
@@ -122,6 +158,11 @@ pub fn request_mac_focus_status_authorization() -> NotificationInterruptionLevel
   }
 }
 
+/// Returns the current notification capability.
+///
+/// `ko`: 현재 알림 사용 가능 여부와 사유를 반환합니다.
+///
+/// @param options
 #[napi(js_name = "getNotificationCapability")]
 pub fn get_notification_capability(
   options: Option<NotificationDiagnosticsOptions>,

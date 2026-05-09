@@ -2,6 +2,8 @@
 
 Typed native OS APIs for Node.js and Electron, powered by napi-rs.
 
+EN | [한국어](README.ko.md)
+
 ## Install
 
 ```bash
@@ -49,7 +51,9 @@ const capability: NotificationCapability = getNotificationCapability()
 
 ## Features
 
-### Notification Permission Status
+### getNotificationPermissionStatus
+
+`macOS` `Windows`
 
 ```ts
 function getNotificationPermissionStatus(options?: NotificationDiagnosticsOptions): NotificationPermissionStatus
@@ -59,11 +63,11 @@ function getNotificationPermissionStatus(options?: NotificationDiagnosticsOption
 type NotificationPermissionStatus = 'granted' | 'denied' | 'not-determined' | 'limited' | 'unsupported' | 'unknown'
 ```
 
-| Platform | Behavior                                                                                                                                                                        |
-| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| macOS    | Returns `unknown` when called outside an app bundle.                                                                                                                            |
-| Windows  | Looks up notification permission by app user model id. Windows defaults to allowed when no app-specific deny state exists. Returns `unknown` if the app id is missing or empty. |
-| Linux    | Returns `unsupported`.                                                                                                                                                          |
+| Platform | Behavior                                                                                                                                                                              |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| macOS    | Returns `unknown` when called outside an app bundle.                                                                                                                                  |
+| Windows  | Looks up notification permission by app user model id.<br>Windows defaults to allowed when no app-specific deny state exists.<br>Returns `unknown` if the app id is missing or empty. |
+| Linux    | Returns `unsupported`.                                                                                                                                                                |
 
 ```ts
 import { getNotificationPermissionStatus } from '@ban-dal/os-bridge'
@@ -75,13 +79,17 @@ For Windows Electron apps, pass the same app user model id used with `app.setApp
 
 `getPermissionStatus(appUserModelId?)` remains available as the low-level compatibility alias.
 
-### macOS Notification Permission Request
+### requestMacNotificationPermission
+
+`macOS` `Windows status only`
 
 ```ts
 function requestMacNotificationPermission(options?: NotificationDiagnosticsOptions): NotificationPermissionStatus
 ```
 
-This API requests notification authorization on macOS and returns the resulting permission status. Windows does not provide an OS API for requesting app notification permission, and its default notification state is allowed, so use `getNotificationPermissionStatus` or `getNotificationCapability` for Windows diagnostics.
+Requests notification authorization on macOS and returns the resulting permission status.
+
+Windows does not provide an OS API for requesting app notification permission. Its default notification state is allowed, so use `getNotificationPermissionStatus` or `getNotificationCapability` for Windows diagnostics.
 
 ```ts
 import { requestMacNotificationPermission } from '@ban-dal/os-bridge'
@@ -89,7 +97,9 @@ import { requestMacNotificationPermission } from '@ban-dal/os-bridge'
 const status = requestMacNotificationPermission()
 ```
 
-### Notification Interruption Level
+### getNotificationInterruptionLevel
+
+`macOS` `Windows`
 
 ```ts
 function getNotificationInterruptionLevel(): NotificationInterruptionLevel
@@ -105,27 +115,43 @@ type NotificationDiagnosticsOptions = {
 }
 ```
 
-This API exposes whether the OS is currently in a normal or limited notification-delivery context. `limited` is diagnostic context only. It does not prove that this app's notifications will be suppressed.
+Returns whether the OS is currently in a normal or limited notification-delivery context.
+`limited` is diagnostic context only. It does not prove that this app's notifications will be suppressed.
 
 #### macOS
 
-On macOS, this API reads `INFocusStatusCenter`. To read this value, the app must be able to access Focus Status and the user must enable the app in System Settings > Privacy & Security > Focus. Use `requestMacFocusStatusAuthorization()` from an app bundle to request that Focus Status access.
+On macOS, the following conditions are required:
 
-macOS reports Focus from this app's effective perspective: if the current Focus allows this app, the value can be `normal` even while Focus is enabled. If Focus Status access is unavailable or not enabled for the app, this API returns `unknown`.
+1. Communication Notifications enabled for the App ID in Apple Developer > Identifiers.
+2. A bundled app code-signed with that account, not ad-hoc signing.
+3. The app enabled in System Settings > Privacy & Security > Focus. You can prompt the user for this with `requestMacFocusStatusAuthorization()`.
+
+Even when Focus or Do Not Disturb is enabled, the result is `normal` if the app is included in the allowed apps for the current Focus.
 
 #### Windows
 
-On Windows, this API reads `ToastNotificationManager.GetDefault().NotificationMode()`. `Unrestricted` maps to `normal`, while `PriorityOnly` and `AlarmsOnly` map to `limited`. Windows does not expose whether this app is included in the user's priority app list, so `limited` means the system is limiting notifications, not that this app is definitely blocked.
+On Windows, the interruption level comes from `ToastNotificationManager.GetDefault().NotificationMode()`.
 
-### macOS Focus Status Access Request
+- `Unrestricted` returns `normal`.
+- `PriorityOnly` and `AlarmsOnly` return `limited`.
+
+Windows does not expose whether this app is included in the user's priority app list. Therefore, `limited` means the system is limiting notifications, not that this app is definitely blocked.
+
+### requestMacFocusStatusAuthorization
+
+`macOS`
 
 ```ts
 function requestMacFocusStatusAuthorization(): NotificationInterruptionLevel
 ```
 
-This API requests permission for macOS to share Focus Status with this app, then returns the current interruption level. If the request has already been handled by the OS, macOS may not show another alert.
+Requests permission to share Focus Status with this app, then returns the current interruption level.
 
-### Notification Capability
+If the request has already been handled by the OS, the system may not show another alert.
+
+### getNotificationCapability
+
+`macOS` `Windows`
 
 ```ts
 function getNotificationCapability(options?: NotificationDiagnosticsOptions): NotificationCapability
@@ -148,7 +174,10 @@ type NotificationUnavailableReason =
   | 'unknown'
 ```
 
-`canNotify` is based on platform support, notification permission, and platform-specific requirements such as the Windows app user model id. The interruption level is returned as diagnostic context, but it is not treated as a definitive notification-blocking reason.
+`canNotify` is based on platform support, notification permission, and platform-specific requirements.
+For example, Windows also needs a valid app user model id.
+
+The interruption level is returned as diagnostic context. It is not treated as a definitive notification-blocking reason.
 
 #### Electron
 
@@ -218,4 +247,6 @@ cd electron-probe
 pnpm pack:mac
 ```
 
-The probe can request macOS Focus Status access and includes `NSFocusStatusUsageDescription` in the packaged app. The macOS probe package is ad-hoc signed locally for manual testing.
+The probe can request macOS Focus Status access. It includes `NSFocusStatusUsageDescription` in the packaged app.
+
+The macOS probe package is ad-hoc signed locally for manual testing.
