@@ -1,4 +1,5 @@
 import { app, BrowserWindow, Notification, ipcMain, shell } from 'electron'
+import { existsSync, mkdirSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import type { NotificationDiagnosticsOptions } from '../../index'
@@ -15,6 +16,8 @@ if (process.platform === 'win32') {
 }
 
 let mainWindow: BrowserWindow | null = null
+let windowsShortcutPath: string | null = null
+let windowsShortcutStatus: string | null = null
 
 function resolveBridgePath(): string {
   if (app.isPackaged) {
@@ -54,6 +57,8 @@ function readDiagnostics(options: DiagnosticsOptions = {}) {
       name: app.getName(),
       version: app.getVersion(),
       executablePath: app.getPath('exe'),
+      windowsShortcutPath,
+      windowsShortcutStatus,
     },
     runtime: {
       platform: process.platform,
@@ -69,6 +74,38 @@ function readDiagnostics(options: DiagnosticsOptions = {}) {
       capability,
     },
     electronNotificationSupported: Notification.isSupported(),
+  }
+}
+
+function ensureWindowsAppShortcut() {
+  if (process.platform !== 'win32') {
+    return
+  }
+
+  const programsPath = path.join(app.getPath('appData'), 'Microsoft', 'Windows', 'Start Menu', 'Programs')
+  const shortcutPath = path.join(programsPath, `${productName}.lnk`)
+  const appPath = app.getAppPath()
+  const operation = existsSync(shortcutPath) ? 'replace' : 'create'
+
+  mkdirSync(programsPath, { recursive: true })
+
+  try {
+    const written = shell.writeShortcutLink(shortcutPath, operation, {
+      target: app.getPath('exe'),
+      cwd: app.isPackaged ? path.dirname(app.getPath('exe')) : appPath,
+      ...(app.isPackaged ? {} : { args: `"${appPath}"` }),
+      description: 'Manual Electron probe for OS Bridge notification diagnostics.',
+      icon: app.getPath('exe'),
+      iconIndex: 0,
+      appUserModelId,
+    })
+    const exists = existsSync(shortcutPath)
+
+    windowsShortcutPath = exists ? shortcutPath : null
+    windowsShortcutStatus = written && exists ? operation : 'failed'
+  } catch (error) {
+    windowsShortcutPath = null
+    windowsShortcutStatus = error instanceof Error ? error.message : String(error)
   }
 }
 
@@ -108,6 +145,7 @@ function createWindow() {
 
 app.whenReady().then(() => {
   app.setName(productName)
+  ensureWindowsAppShortcut()
   createWindow()
 
   app.on('activate', () => {

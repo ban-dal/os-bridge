@@ -5,6 +5,7 @@
   "description": "Manual Electron probe for @ban-dal/os-bridge notification diagnostics.",
   "author": "ban-dal",
   "productName": "OS Bridge Probe",
+  "packageManager": "pnpm@10.28.1",
   "main": "dist-electron/index.js",
   "scripts": {
     "dev": "vite",

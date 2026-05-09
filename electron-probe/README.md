@@ -10,6 +10,8 @@ cp .env.example .env
 pnpm install
 ```
 
+This project pins pnpm 10 and explicitly allows the `electron` and `esbuild` install scripts in `pnpm-workspace.yaml`. That lets a fresh clone run Electron's postinstall step during `pnpm install`, so `pnpm dev` can start without a separate rebuild.
+
 ```dotenv
 PROBE_APP_ID=com.bandal.osbridge.probe
 PROBE_PRODUCT_NAME=OS Bridge Probe
@@ -48,4 +50,4 @@ The macOS package is ad-hoc signed locally and includes `NSFocusStatusUsageDescr
 6. Press `Send Notification` and confirm whether a notification appears.
 7. Compare `canNotify`, `permission`, `focusStatus`, and `reasons` with the actual OS state.
 
-On Windows, set `PROBE_APP_ID` to the same value used as the app user model id. The probe calls `app.setAppUserModelId(PROBE_APP_ID)` before reading diagnostics.
+On Windows, set `PROBE_APP_ID` to the same value used as the app user model id. The probe calls `app.setAppUserModelId(PROBE_APP_ID)` and writes a Start Menu shortcut named `PROBE_PRODUCT_NAME` with that app user model id. Restart the dev app once after the shortcut is created so new notifications can resolve the display name in Windows notification UI.

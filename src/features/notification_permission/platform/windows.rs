@@ -1,3 +1,4 @@
+use std::io::ErrorKind;
 use windows::UI::Shell::FocusSessionManager;
 use winreg::enums::HKEY_CURRENT_USER;
 use winreg::RegKey;
@@ -20,18 +21,23 @@ fn read_registry_setting(app_id: &str) -> Option<String> {
     r"Software\Microsoft\Windows\CurrentVersion\Notifications\Settings\{}",
     app_id
   );
-  let key = current_user.open_subkey(key_path).ok()?;
+  let key = match current_user.open_subkey(key_path) {
+    Ok(key) => key,
+    Err(error) if error.kind() == ErrorKind::NotFound => return Some("granted".to_string()),
+    Err(_) => return None,
+  };
   let enabled = key.get_value::<u32, _>("Enabled").ok();
 
   // Windows omits this value for the default allowed state.
-  Some(
-    match enabled {
-      Some(0) => "denied",
-      Some(_) => "granted",
-      None => "granted",
-    }
-    .to_string(),
-  )
+  Some(permission_from_enabled_value(enabled).to_string())
+}
+
+fn permission_from_enabled_value(enabled: Option<u32>) -> &'static str {
+  match enabled {
+    Some(0) => "denied",
+    Some(_) => "granted",
+    None => "granted",
+  }
 }
 
 fn read_focus_session_status() -> Option<String> {
@@ -62,5 +68,16 @@ mod tests {
   fn returns_unknown_without_app_id() {
     assert_eq!(get_permission_status(None), "unknown");
     assert_eq!(get_permission_status(Some(" ".to_string())), "unknown");
+  }
+
+  #[test]
+  fn treats_missing_enabled_value_as_granted() {
+    assert_eq!(permission_from_enabled_value(None), "granted");
+  }
+
+  #[test]
+  fn maps_enabled_registry_value_to_permission() {
+    assert_eq!(permission_from_enabled_value(Some(0)), "denied");
+    assert_eq!(permission_from_enabled_value(Some(1)), "granted");
   }
 }

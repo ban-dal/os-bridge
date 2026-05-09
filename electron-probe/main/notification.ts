@@ -42,7 +42,7 @@ function escapeXml(value: string): string {
 
 function createWindowsToastXml(title: string, body: string): string {
   return `
-<toast>
+<toast activationType="protocol">
   <visual>
     <binding template="ToastGeneric">
       <text>${escapeXml(title)}</text>

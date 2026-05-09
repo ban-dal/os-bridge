@@ -19,6 +19,8 @@ type ProbeDiagnostics = {
     name: string
     version: string
     executablePath: string
+    windowsShortcutPath: string | null
+    windowsShortcutStatus: string | null
   }
   runtime: {
     platform: string
