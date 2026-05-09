@@ -11,7 +11,7 @@ pub fn get_permission_status(app_user_model_id: Option<String>) -> String {
   read_registry_setting(&app_id).unwrap_or_else(|| "unknown".to_string())
 }
 
-pub fn get_notification_interruption_level(_request_focus_authorization: bool) -> String {
+pub fn get_notification_interruption_level() -> String {
   read_toast_notification_mode_level().unwrap_or_else(|| "unknown".to_string())
 }
 

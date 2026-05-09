@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 
 type ProbeState = {
   diagnostics: ProbeDiagnostics | null
+  focusStatusRequest: FocusStatusAuthorizationRequest | null
   notificationAttempt: NotificationAttempt | null
   permissionRequest: NotificationPermissionRequest | null
   error: string | null
@@ -19,17 +20,18 @@ function formatBoolean(value: boolean) {
 function App() {
   const [state, setState] = useState<ProbeState>({
     diagnostics: null,
+    focusStatusRequest: null,
     notificationAttempt: null,
     permissionRequest: null,
     error: null,
     loading: false,
   })
 
-  async function refresh(options?: { requestFocusAuthorization?: boolean }) {
+  async function refresh() {
     setState((current) => ({ ...current, loading: true, error: null }))
 
     try {
-      const diagnostics = await window.probe.getDiagnostics(options)
+      const diagnostics = await window.probe.getDiagnostics()
       setState((current) => ({ ...current, diagnostics, loading: false }))
     } catch (error) {
       setState((current) => ({
@@ -47,6 +49,26 @@ function App() {
       const notificationAttempt = await window.probe.sendNotification({ method })
       const diagnostics = await window.probe.getDiagnostics()
       setState((current) => ({ ...current, notificationAttempt, diagnostics, loading: false }))
+    } catch (error) {
+      setState((current) => ({
+        ...current,
+        error: error instanceof Error ? error.message : String(error),
+        loading: false,
+      }))
+    }
+  }
+
+  async function requestMacFocusStatusAuthorization() {
+    setState((current) => ({ ...current, loading: true, error: null }))
+
+    try {
+      const focusStatusRequest = await window.probe.requestMacFocusStatusAuthorization()
+      setState((current) => ({
+        ...current,
+        diagnostics: focusStatusRequest.diagnostics,
+        focusStatusRequest,
+        loading: false,
+      }))
     } catch (error) {
       setState((current) => ({
         ...current,
@@ -84,6 +106,7 @@ function App() {
     () =>
       JSON.stringify(
         {
+          focusStatusRequest: state.focusStatusRequest,
           notificationAttempt: state.notificationAttempt,
           permissionRequest: state.permissionRequest,
           diagnostics: state.diagnostics,
@@ -92,7 +115,7 @@ function App() {
         null,
         2,
       ),
-    [state.diagnostics, state.error, state.notificationAttempt, state.permissionRequest],
+    [state.diagnostics, state.error, state.focusStatusRequest, state.notificationAttempt, state.permissionRequest],
   )
 
   const capability = state.diagnostics?.bridge.capability
@@ -114,7 +137,7 @@ function App() {
           className={buttonClassName}
           disabled={state.loading}
           type="button"
-          onClick={() => refresh({ requestFocusAuthorization: true })}
+          onClick={requestMacFocusStatusAuthorization}
         >
           Request Focus Access
         </button>
@@ -154,11 +177,12 @@ function App() {
         <p className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">{state.error}</p>
       ) : null}
 
-      <section className="grid gap-3 md:grid-cols-5">
+      <section className="grid gap-3 md:grid-cols-6">
         <Status label="Can Notify" value={capability ? formatBoolean(capability.canNotify) : '-'} />
         <Status label="Permission" value={state.diagnostics?.bridge.permission ?? '-'} />
         <Status label="Request Permission" value={state.permissionRequest?.permission ?? '-'} />
         <Status label="Interruption" value={state.diagnostics?.bridge.interruptionLevel ?? '-'} />
+        <Status label="Request Focus" value={state.focusStatusRequest?.interruptionLevel ?? '-'} />
         <Status
           label="Electron Support"
           value={state.diagnostics ? formatBoolean(state.diagnostics.electronNotificationSupported) : '-'}

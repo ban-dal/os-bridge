@@ -27,8 +27,14 @@ pub fn get_permission_status(_app_user_model_id: Option<String>) -> String {
   read_notification_settings().unwrap_or_else(|| "unknown".to_string())
 }
 
-pub fn get_notification_interruption_level(request_focus_authorization: bool) -> String {
-  read_focus_status(request_focus_authorization).unwrap_or_else(|| "unknown".to_string())
+pub fn get_notification_interruption_level() -> String {
+  read_focus_status().unwrap_or_else(|| "unknown".to_string())
+}
+
+pub fn request_focus_status_authorization() -> String {
+  request_focus_status_authorization_status()
+    .and_then(|_| read_focus_status())
+    .unwrap_or_else(|| "unknown".to_string())
 }
 
 pub fn request_notification_permission(_app_user_model_id: Option<String>) -> String {
@@ -92,7 +98,7 @@ fn read_notification_settings() -> Option<String> {
   }
 }
 
-fn read_focus_status(request_focus_authorization: bool) -> Option<String> {
+fn read_focus_status() -> Option<String> {
   unsafe {
     let center_class = Class::get("INFocusStatusCenter")?;
     let center: *mut Object = msg_send![center_class, defaultCenter];
@@ -101,11 +107,7 @@ fn read_focus_status(request_focus_authorization: bool) -> Option<String> {
       return Some("unsupported:center-null".to_string());
     }
 
-    let mut authorization_status: i64 = msg_send![center, authorizationStatus];
-
-    if authorization_status != FOCUS_STATUS_AUTHORIZED && request_focus_authorization {
-      authorization_status = request_focus_status_authorization(center)?;
-    }
+    let authorization_status: i64 = msg_send![center, authorizationStatus];
 
     if authorization_status != FOCUS_STATUS_AUTHORIZED {
       return Some(format!("not-authorized:{}", authorization_status));
@@ -133,10 +135,23 @@ fn focus_active_status(is_active: bool) -> String {
   if is_active { "limited" } else { "normal" }.to_string()
 }
 
-fn request_focus_status_authorization(center: *mut Object) -> Option<i64> {
+fn request_focus_status_authorization_status() -> Option<i64> {
   let (sender, receiver) = mpsc::channel();
 
   unsafe {
+    let center_class = Class::get("INFocusStatusCenter")?;
+    let center: *mut Object = msg_send![center_class, defaultCenter];
+
+    if center.is_null() {
+      return None;
+    }
+
+    let authorization_status: i64 = msg_send![center, authorizationStatus];
+
+    if authorization_status == FOCUS_STATUS_AUTHORIZED {
+      return Some(authorization_status);
+    }
+
     let block = ConcreteBlock::new(move |status: i64| {
       let _ = sender.send(status);
     })

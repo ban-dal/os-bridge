@@ -1,6 +1,11 @@
 import test from 'ava'
 
-import { getNotificationCapability, getNotificationInterruptionLevel, getNotificationPermissionStatus } from '../index'
+import {
+  getNotificationCapability,
+  getNotificationInterruptionLevel,
+  getNotificationPermissionStatus,
+  requestMacFocusStatusAuthorization,
+} from '../index'
 
 const permissionStatuses = new Set(['granted', 'denied', 'not-determined', 'limited', 'unsupported', 'unknown'])
 const notificationInterruptionLevels = new Set(['normal', 'limited', 'unsupported', 'unknown'])
@@ -11,6 +16,10 @@ test('reads notification permission status', (t) => {
 
 test('reads notification interruption level as a stable value', (t) => {
   t.true(notificationInterruptionLevels.has(getNotificationInterruptionLevel()))
+})
+
+test('requests macOS focus status authorization as a stable value', (t) => {
+  t.true(notificationInterruptionLevels.has(requestMacFocusStatusAuthorization()))
 })
 
 test('reads notification capability as a stable shape', (t) => {

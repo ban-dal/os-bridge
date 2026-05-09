@@ -31,12 +31,13 @@ Platform packages are optional dependencies. Always import from `@ban-dal/os-bri
 
 ## Feature Index
 
-| Feature                         | API                                | macOS     | Windows     | Linux         |
-| ------------------------------- | ---------------------------------- | --------- | ----------- | ------------- |
-| Notification permission status  | `getNotificationPermissionStatus`  | Supported | Supported   | `unsupported` |
-| macOS notification permission   | `requestMacNotificationPermission` | Supported | Status only | `unsupported` |
-| Notification interruption level | `getNotificationInterruptionLevel` | Supported | Supported   | `unsupported` |
-| Notification capability summary | `getNotificationCapability`        | Supported | Supported   | `unsupported` |
+| Feature                         | API                                  | macOS     | Windows       | Linux         |
+| ------------------------------- | ------------------------------------ | --------- | ------------- | ------------- |
+| Notification permission status  | `getNotificationPermissionStatus`    | Supported | Supported     | `unsupported` |
+| macOS notification permission   | `requestMacNotificationPermission`   | Supported | Status only   | `unsupported` |
+| Notification interruption level | `getNotificationInterruptionLevel`   | Supported | Supported     | `unsupported` |
+| macOS Focus Status access       | `requestMacFocusStatusAuthorization` | Supported | `unsupported` | `unsupported` |
+| Notification capability summary | `getNotificationCapability`          | Supported | Supported     | `unsupported` |
 
 ## Usage
 
@@ -91,7 +92,7 @@ const status = requestMacNotificationPermission()
 ### Notification Interruption Level
 
 ```ts
-function getNotificationInterruptionLevel(options?: NotificationDiagnosticsOptions): NotificationInterruptionLevel
+function getNotificationInterruptionLevel(): NotificationInterruptionLevel
 ```
 
 ```ts
@@ -101,7 +102,6 @@ type NotificationInterruptionLevel = 'normal' | 'limited' | 'unsupported' | 'unk
 ```ts
 type NotificationDiagnosticsOptions = {
   appUserModelId?: string
-  requestFocusAuthorization?: boolean
 }
 ```
 
@@ -109,7 +109,7 @@ This API exposes whether the OS is currently in a normal or limited notification
 
 #### macOS
 
-On macOS, this API reads `INFocusStatusCenter`. To read this value, the app must be able to access Focus Status and the user must enable the app in System Settings > Privacy & Security > Focus. Pass `{ requestFocusAuthorization: true }` from an app bundle to request that Focus Status access before reading the value.
+On macOS, this API reads `INFocusStatusCenter`. To read this value, the app must be able to access Focus Status and the user must enable the app in System Settings > Privacy & Security > Focus. Use `requestMacFocusStatusAuthorization()` from an app bundle to request that Focus Status access.
 
 macOS reports Focus from this app's effective perspective: if the current Focus allows this app, the value can be `normal` even while Focus is enabled. If Focus Status access is unavailable or not enabled for the app, this API returns `unknown`.
 
@@ -117,7 +117,13 @@ macOS reports Focus from this app's effective perspective: if the current Focus 
 
 On Windows, this API reads `ToastNotificationManager.GetDefault().NotificationMode()`. `Unrestricted` maps to `normal`, while `PriorityOnly` and `AlarmsOnly` map to `limited`. Windows does not expose whether this app is included in the user's priority app list, so `limited` means the system is limiting notifications, not that this app is definitely blocked.
 
-`requestFocusAuthorization` is macOS-only. Windows ignores this option.
+### macOS Focus Status Access Request
+
+```ts
+function requestMacFocusStatusAuthorization(): NotificationInterruptionLevel
+```
+
+This API requests permission for macOS to share Focus Status with this app, then returns the current interruption level. If the request has already been handled by the OS, macOS may not show another alert.
 
 ### Notification Capability
 

@@ -2,11 +2,9 @@ import { app, BrowserWindow, Notification, ipcMain, shell } from 'electron'
 import { existsSync, mkdirSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import type { NotificationDiagnosticsOptions } from '../../index'
 import { sendNotification, type NotificationMethod } from './notification'
 
 type Bridge = typeof import('../../index')
-type DiagnosticsOptions = Pick<NotificationDiagnosticsOptions, 'requestFocusAuthorization'>
 
 const appUserModelId = process.env.PROBE_APP_ID || 'com.bandal.osbridge.probe'
 const productName = process.env.PROBE_PRODUCT_NAME || 'OS Bridge Probe'
@@ -38,15 +36,14 @@ function loadBridge(): { bridge: Bridge; bridgePath: string } {
   }
 }
 
-function readDiagnostics(options: DiagnosticsOptions = {}) {
+function readDiagnostics() {
   const { bridge, bridgePath } = loadBridge()
   const diagnosticsOptions = {
     appUserModelId,
-    requestFocusAuthorization: options.requestFocusAuthorization === true,
   }
 
   const permission = bridge.getNotificationPermissionStatus(diagnosticsOptions)
-  const interruptionLevel = bridge.getNotificationInterruptionLevel(diagnosticsOptions)
+  const interruptionLevel = bridge.getNotificationInterruptionLevel()
   const capability = bridge.getNotificationCapability(diagnosticsOptions)
 
   return {
@@ -122,6 +119,12 @@ function requestMacNotificationPermission() {
   return bridge.getNotificationPermissionStatus(diagnosticsOptions)
 }
 
+function requestMacFocusStatusAuthorization() {
+  const { bridge } = loadBridge()
+
+  return bridge.requestMacFocusStatusAuthorization()
+}
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 980,
@@ -161,8 +164,8 @@ app.on('window-all-closed', () => {
   }
 })
 
-ipcMain.handle('probe:getDiagnostics', (_event, options) => {
-  return readDiagnostics(options)
+ipcMain.handle('probe:getDiagnostics', () => {
+  return readDiagnostics()
 })
 
 ipcMain.handle('probe:sendNotification', (_event, options: { method?: NotificationMethod } = {}) => {
@@ -180,6 +183,17 @@ ipcMain.handle('probe:requestMacNotificationPermission', () => {
 
   return {
     permission,
+    diagnostics,
+    checkedAt: new Date().toISOString(),
+  }
+})
+
+ipcMain.handle('probe:requestMacFocusStatusAuthorization', () => {
+  const interruptionLevel = requestMacFocusStatusAuthorization()
+  const diagnostics = readDiagnostics()
+
+  return {
+    interruptionLevel,
     diagnostics,
     checkedAt: new Date().toISOString(),
   }

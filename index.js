@@ -583,4 +583,5 @@ module.exports.getPermissionStatus = nativeBinding.getPermissionStatus
 module.exports.NotificationInterruptionLevel = nativeBinding.NotificationInterruptionLevel
 module.exports.NotificationPermissionStatus = nativeBinding.NotificationPermissionStatus
 module.exports.NotificationUnavailableReason = nativeBinding.NotificationUnavailableReason
+module.exports.requestMacFocusStatusAuthorization = nativeBinding.requestMacFocusStatusAuthorization
 module.exports.requestMacNotificationPermission = nativeBinding.requestMacNotificationPermission

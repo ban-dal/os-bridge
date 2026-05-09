@@ -57,9 +57,16 @@ type NotificationPermissionRequest = {
   checkedAt: string
 }
 
+type FocusStatusAuthorizationRequest = {
+  interruptionLevel: NotificationInterruptionLevel
+  diagnostics: ProbeDiagnostics
+  checkedAt: string
+}
+
 interface Window {
   probe: {
-    getDiagnostics: (options?: { requestFocusAuthorization?: boolean }) => Promise<ProbeDiagnostics>
+    getDiagnostics: () => Promise<ProbeDiagnostics>
+    requestMacFocusStatusAuthorization: () => Promise<FocusStatusAuthorizationRequest>
     requestMacNotificationPermission: () => Promise<NotificationPermissionRequest>
     sendNotification: (options?: { method?: NotificationMethod }) => Promise<NotificationAttempt>
     openBridgePath: () => Promise<void>

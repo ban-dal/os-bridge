@@ -1,10 +1,10 @@
 import { contextBridge, ipcRenderer } from 'electron'
 
-type DiagnosticsOptions = { requestFocusAuthorization?: boolean }
 type NotificationOptions = { method?: 'electron' | 'osascript' }
 
 contextBridge.exposeInMainWorld('probe', {
-  getDiagnostics: (options?: DiagnosticsOptions) => ipcRenderer.invoke('probe:getDiagnostics', options),
+  getDiagnostics: () => ipcRenderer.invoke('probe:getDiagnostics'),
+  requestMacFocusStatusAuthorization: () => ipcRenderer.invoke('probe:requestMacFocusStatusAuthorization'),
   requestMacNotificationPermission: () => ipcRenderer.invoke('probe:requestMacNotificationPermission'),
   sendNotification: (options?: NotificationOptions) => ipcRenderer.invoke('probe:sendNotification', options),
   openBridgePath: () => ipcRenderer.invoke('probe:openBridgePath'),

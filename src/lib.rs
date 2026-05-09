@@ -62,7 +62,6 @@ pub enum NotificationUnavailableReason {
 #[napi(object)]
 pub struct NotificationDiagnosticsOptions {
   pub app_user_model_id: Option<String>,
-  pub request_focus_authorization: Option<bool>,
 }
 
 #[napi(object)]
@@ -104,21 +103,22 @@ pub fn request_mac_notification_permission(
 }
 
 #[napi(js_name = "getNotificationInterruptionLevel")]
-pub fn get_notification_interruption_level(
-  options: Option<NotificationDiagnosticsOptions>,
-) -> NotificationInterruptionLevel {
+pub fn get_notification_interruption_level() -> NotificationInterruptionLevel {
   let platform = current_platform();
 
   if !is_supported_notification_platform(&platform) {
     NotificationInterruptionLevel::Unsupported
   } else {
-    features::notification_permission::get_notification_interruption_level(
-      options
-        .as_ref()
-        .and_then(|value| value.request_focus_authorization)
-        .unwrap_or(false),
-    )
-    .into()
+    features::notification_permission::get_notification_interruption_level().into()
+  }
+}
+
+#[napi(js_name = "requestMacFocusStatusAuthorization")]
+pub fn request_mac_focus_status_authorization() -> NotificationInterruptionLevel {
+  if current_platform() != "darwin" {
+    NotificationInterruptionLevel::Unsupported
+  } else {
+    features::notification_permission::request_focus_status_authorization().into()
   }
 }
 
@@ -132,18 +132,9 @@ pub fn get_notification_capability(
       .as_ref()
       .and_then(|value| value.app_user_model_id.clone()),
   );
-  let interruption_level = get_notification_interruption_level(options.clone());
+  let interruption_level = get_notification_interruption_level();
 
   resolve_notification_capability(options.as_ref(), platform, permission, interruption_level)
-}
-
-impl Clone for NotificationDiagnosticsOptions {
-  fn clone(&self) -> Self {
-    Self {
-      app_user_model_id: self.app_user_model_id.clone(),
-      request_focus_authorization: self.request_focus_authorization,
-    }
-  }
 }
 
 fn resolve_notification_capability(
