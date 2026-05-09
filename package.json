@@ -1,6 +1,6 @@
 {
   "name": "@ban-dal/os-bridge",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Typed native notification diagnostics for Node.js and Electron on macOS and Windows.",
   "main": "index.js",
   "types": "index.d.ts",
