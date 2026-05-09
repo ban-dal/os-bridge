@@ -46,7 +46,7 @@ function readDiagnostics(options: DiagnosticsOptions = {}) {
   }
 
   const permission = bridge.getNotificationPermissionStatus(diagnosticsOptions)
-  const focusStatus = bridge.getNotificationFocusStatus(diagnosticsOptions)
+  const interruptionLevel = bridge.getNotificationInterruptionLevel(diagnosticsOptions)
   const capability = bridge.getNotificationCapability(diagnosticsOptions)
 
   return {
@@ -70,7 +70,7 @@ function readDiagnostics(options: DiagnosticsOptions = {}) {
     bridge: {
       path: bridgePath,
       permission,
-      focusStatus,
+      interruptionLevel,
       capability,
     },
     electronNotificationSupported: Notification.isSupported(),
@@ -109,14 +109,14 @@ function ensureWindowsAppShortcut() {
   }
 }
 
-function requestNotificationPermission() {
+function requestMacNotificationPermission() {
   const { bridge } = loadBridge()
   const diagnosticsOptions = {
     appUserModelId,
   }
 
-  if (typeof bridge.requestNotificationPermission === 'function') {
-    return bridge.requestNotificationPermission(diagnosticsOptions)
+  if (typeof bridge.requestMacNotificationPermission === 'function') {
+    return bridge.requestMacNotificationPermission(diagnosticsOptions)
   }
 
   return bridge.getNotificationPermissionStatus(diagnosticsOptions)
@@ -174,8 +174,8 @@ ipcMain.handle('probe:sendNotification', (_event, options: { method?: Notificati
   })
 })
 
-ipcMain.handle('probe:requestNotificationPermission', () => {
-  const permission = requestNotificationPermission()
+ipcMain.handle('probe:requestMacNotificationPermission', () => {
+  const permission = requestMacNotificationPermission()
   const diagnostics = readDiagnostics()
 
   return {

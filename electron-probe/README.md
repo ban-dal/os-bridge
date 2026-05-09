@@ -48,6 +48,6 @@ The macOS package is ad-hoc signed locally and includes `NSFocusStatusUsageDescr
 4. Press `Refresh`.
 5. Press `Request Notification Access` in the packaged macOS app and approve the system prompt if shown.
 6. Press `Send Notification` and confirm whether a notification appears.
-7. Compare `canNotify`, `permission`, `focusStatus`, and `reasons` with the actual OS state.
+7. Compare `canNotify`, `permission`, `interruptionLevel`, and `reasons` with the actual OS state.
 
 On Windows, set `PROBE_APP_ID` to the same value used as the app user model id. The probe calls `app.setAppUserModelId(PROBE_APP_ID)` and writes a Start Menu shortcut named `PROBE_PRODUCT_NAME` with that app user model id. Restart the dev app once after the shortcut is created so new notifications can resolve the display name in Windows notification UI.

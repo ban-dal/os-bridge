@@ -1,13 +1,13 @@
 /// <reference types="vite/client" />
 
 type NotificationPermissionStatus = 'granted' | 'denied' | 'not-determined' | 'limited' | 'unsupported' | 'unknown'
-type NotificationFocusStatus = 'active' | 'inactive' | 'unsupported' | 'unknown'
+type NotificationInterruptionLevel = 'normal' | 'limited' | 'unsupported' | 'unknown'
 type NotificationMethod = 'electron' | 'osascript'
 
 type NotificationCapability = {
   canNotify: boolean
   permission: NotificationPermissionStatus
-  focusStatus: NotificationFocusStatus
+  interruptionLevel: NotificationInterruptionLevel
   reasons: string[]
 }
 
@@ -32,7 +32,7 @@ type ProbeDiagnostics = {
   bridge: {
     path: string
     permission: NotificationPermissionStatus
-    focusStatus: NotificationFocusStatus
+    interruptionLevel: NotificationInterruptionLevel
     capability: NotificationCapability
   }
   electronNotificationSupported: boolean
@@ -60,7 +60,7 @@ type NotificationPermissionRequest = {
 interface Window {
   probe: {
     getDiagnostics: (options?: { requestFocusAuthorization?: boolean }) => Promise<ProbeDiagnostics>
-    requestNotificationPermission: () => Promise<NotificationPermissionRequest>
+    requestMacNotificationPermission: () => Promise<NotificationPermissionRequest>
     sendNotification: (options?: { method?: NotificationMethod }) => Promise<NotificationAttempt>
     openBridgePath: () => Promise<void>
   }

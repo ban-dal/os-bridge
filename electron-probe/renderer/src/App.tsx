@@ -56,11 +56,11 @@ function App() {
     }
   }
 
-  async function requestNotificationPermission() {
+  async function requestMacNotificationPermission() {
     setState((current) => ({ ...current, loading: true, error: null }))
 
     try {
-      const permissionRequest = await window.probe.requestNotificationPermission()
+      const permissionRequest = await window.probe.requestMacNotificationPermission()
       setState((current) => ({
         ...current,
         diagnostics: permissionRequest.diagnostics,
@@ -138,9 +138,9 @@ function App() {
           className={buttonClassName}
           disabled={state.loading}
           type="button"
-          onClick={requestNotificationPermission}
+          onClick={requestMacNotificationPermission}
         >
-          Request Notification Access
+          Request Notification Access (To MAC)
         </button>
         <button className={buttonClassName} type="button" onClick={() => navigator.clipboard.writeText(rawResult)}>
           Copy JSON
@@ -158,7 +158,7 @@ function App() {
         <Status label="Can Notify" value={capability ? formatBoolean(capability.canNotify) : '-'} />
         <Status label="Permission" value={state.diagnostics?.bridge.permission ?? '-'} />
         <Status label="Request Permission" value={state.permissionRequest?.permission ?? '-'} />
-        <Status label="Focus Status" value={state.diagnostics?.bridge.focusStatus ?? '-'} />
+        <Status label="Interruption" value={state.diagnostics?.bridge.interruptionLevel ?? '-'} />
         <Status
           label="Electron Support"
           value={state.diagnostics ? formatBoolean(state.diagnostics.electronNotificationSupported) : '-'}

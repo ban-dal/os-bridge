@@ -1,16 +1,16 @@
 import test from 'ava'
 
-import { getNotificationCapability, getNotificationFocusStatus, getNotificationPermissionStatus } from '../index'
+import { getNotificationCapability, getNotificationInterruptionLevel, getNotificationPermissionStatus } from '../index'
 
 const permissionStatuses = new Set(['granted', 'denied', 'not-determined', 'limited', 'unsupported', 'unknown'])
-const notificationFocusStatuses = new Set(['active', 'inactive', 'unsupported', 'unknown'])
+const notificationInterruptionLevels = new Set(['normal', 'limited', 'unsupported', 'unknown'])
 
 test('reads notification permission status', (t) => {
   t.true(permissionStatuses.has(getNotificationPermissionStatus()))
 })
 
-test('reads notification focus status as a stable value', (t) => {
-  t.true(notificationFocusStatuses.has(getNotificationFocusStatus()))
+test('reads notification interruption level as a stable value', (t) => {
+  t.true(notificationInterruptionLevels.has(getNotificationInterruptionLevel()))
 })
 
 test('reads notification capability as a stable shape', (t) => {
@@ -18,6 +18,6 @@ test('reads notification capability as a stable shape', (t) => {
 
   t.is(typeof capability.canNotify, 'boolean')
   t.true(permissionStatuses.has(capability.permission))
-  t.true(notificationFocusStatuses.has(capability.focusStatus))
+  t.true(notificationInterruptionLevels.has(capability.interruptionLevel))
   t.true(Array.isArray(capability.reasons))
 })

@@ -31,11 +31,12 @@ Platform packages are optional dependencies. Always import from `@ban-dal/os-bri
 
 ## Feature Index
 
-| Feature                         | API                               | macOS     | Windows   | Linux         |
-| ------------------------------- | --------------------------------- | --------- | --------- | ------------- |
-| Notification permission status  | `getNotificationPermissionStatus` | Supported | Supported | `unsupported` |
-| Notification Focus status       | `getNotificationFocusStatus`      | Supported | Supported | `unsupported` |
-| Notification capability summary | `getNotificationCapability`       | Supported | Supported | `unsupported` |
+| Feature                         | API                                | macOS     | Windows     | Linux         |
+| ------------------------------- | ---------------------------------- | --------- | ----------- | ------------- |
+| Notification permission status  | `getNotificationPermissionStatus`  | Supported | Supported   | `unsupported` |
+| macOS notification permission   | `requestMacNotificationPermission` | Supported | Status only | `unsupported` |
+| Notification interruption level | `getNotificationInterruptionLevel` | Supported | Supported   | `unsupported` |
+| Notification capability summary | `getNotificationCapability`        | Supported | Supported   | `unsupported` |
 
 ## Usage
 
@@ -57,11 +58,11 @@ function getNotificationPermissionStatus(options?: NotificationDiagnosticsOption
 type NotificationPermissionStatus = 'granted' | 'denied' | 'not-determined' | 'limited' | 'unsupported' | 'unknown'
 ```
 
-| Platform | Behavior                                                                                                    |
-| -------- | ----------------------------------------------------------------------------------------------------------- |
-| macOS    | Returns `unknown` when called outside an app bundle.                                                        |
-| Windows  | Looks up notification permission by app user model id. Returns `unknown` if the app id is missing or empty. |
-| Linux    | Returns `unsupported`.                                                                                      |
+| Platform | Behavior                                                                                                                                                                        |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| macOS    | Returns `unknown` when called outside an app bundle.                                                                                                                            |
+| Windows  | Looks up notification permission by app user model id. Windows defaults to allowed when no app-specific deny state exists. Returns `unknown` if the app id is missing or empty. |
+| Linux    | Returns `unsupported`.                                                                                                                                                          |
 
 ```ts
 import { getNotificationPermissionStatus } from '@ban-dal/os-bridge'
@@ -73,19 +74,51 @@ For Windows Electron apps, pass the same app user model id used with `app.setApp
 
 `getPermissionStatus(appUserModelId?)` remains available as the low-level compatibility alias.
 
-### Notification Focus Status
+### macOS Notification Permission Request
 
 ```ts
-function getNotificationFocusStatus(options?: NotificationDiagnosticsOptions): NotificationFocusStatus
+function requestMacNotificationPermission(options?: NotificationDiagnosticsOptions): NotificationPermissionStatus
+```
+
+This API requests notification authorization on macOS and returns the resulting permission status. Windows does not provide an OS API for requesting app notification permission, and its default notification state is allowed, so use `getNotificationPermissionStatus` or `getNotificationCapability` for Windows diagnostics.
+
+```ts
+import { requestMacNotificationPermission } from '@ban-dal/os-bridge'
+
+const status = requestMacNotificationPermission()
+```
+
+### Notification Interruption Level
+
+```ts
+function getNotificationInterruptionLevel(options?: NotificationDiagnosticsOptions): NotificationInterruptionLevel
 ```
 
 ```ts
-type NotificationFocusStatus = 'active' | 'inactive' | 'unsupported' | 'unknown'
+type NotificationInterruptionLevel = 'normal' | 'limited' | 'unsupported' | 'unknown'
 ```
 
-This API exposes the focus signal available to the native implementation. On macOS, it reads `INFocusStatusCenter` and returns `unknown` if the app cannot access Focus Status. On Windows 11, it reads `Windows.UI.Shell.FocusSessionManager`, which reports an active Focus session rather than the full notification suppression state; older or unsupported Windows versions return `unsupported` or `unknown`.
+```ts
+type NotificationDiagnosticsOptions = {
+  appUserModelId?: string
+  platform?: string
+  requestFocusAuthorization?: boolean
+}
+```
 
-Pass `{ requestFocusAuthorization: true }` from an app bundle on macOS to trigger the Focus Status authorization prompt before reading the status.
+This API exposes whether the OS is currently in a normal or limited notification-delivery context. `limited` is diagnostic context only. It does not prove that this app's notifications will be suppressed.
+
+#### macOS
+
+On macOS, this API reads `INFocusStatusCenter`. To read this value, the app must be able to access Focus Status and the user must enable the app in System Settings > Privacy & Security > Focus. Pass `{ requestFocusAuthorization: true }` from an app bundle to request that Focus Status access before reading the value.
+
+macOS reports Focus from this app's effective perspective: if the current Focus allows this app, the value can be `normal` even while Focus is enabled. If Focus Status access is unavailable or not enabled for the app, this API returns `unknown`.
+
+#### Windows
+
+On Windows, this API reads `ToastNotificationManager.GetDefault().NotificationMode()`. `Unrestricted` maps to `normal`, while `PriorityOnly` and `AlarmsOnly` map to `limited`. Windows does not expose whether this app is included in the user's priority app list, so `limited` means the system is limiting notifications, not that this app is definitely blocked.
+
+`requestFocusAuthorization` is macOS-only. Windows ignores this option.
 
 ### Notification Capability
 
@@ -97,7 +130,7 @@ function getNotificationCapability(options?: NotificationDiagnosticsOptions): No
 type NotificationCapability = {
   canNotify: boolean
   permission: NotificationPermissionStatus
-  focusStatus: NotificationFocusStatus
+  interruptionLevel: NotificationInterruptionLevel
   reasons: NotificationUnavailableReason[]
 }
 
@@ -106,13 +139,11 @@ type NotificationUnavailableReason =
   | 'permission-not-determined'
   | 'missing-app-user-model-id'
   | 'invalid-app-user-model-id'
-  | 'not-bundled-app'
-  | 'not-code-signed'
   | 'unsupported-platform'
   | 'unknown'
 ```
 
-`canNotify` is based on platform support, notification permission, and platform-specific requirements such as the Windows app user model id. Focus status is returned as diagnostic context, but it is not treated as a definitive notification-blocking reason.
+`canNotify` is based on platform support, notification permission, and platform-specific requirements such as the Windows app user model id. The interruption level is returned as diagnostic context, but it is not treated as a definitive notification-blocking reason.
 
 #### Electron
 

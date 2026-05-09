@@ -27,7 +27,7 @@ pub fn get_permission_status(_app_user_model_id: Option<String>) -> String {
   read_notification_settings().unwrap_or_else(|| "unknown".to_string())
 }
 
-pub fn get_notification_focus_status(request_focus_authorization: bool) -> String {
+pub fn get_notification_interruption_level(request_focus_authorization: bool) -> String {
   read_focus_status(request_focus_authorization).unwrap_or_else(|| "unknown".to_string())
 }
 
@@ -130,7 +130,7 @@ fn read_focus_status(request_focus_authorization: bool) -> Option<String> {
 }
 
 fn focus_active_status(is_active: bool) -> String {
-  if is_active { "active" } else { "inactive" }.to_string()
+  if is_active { "limited" } else { "normal" }.to_string()
 }
 
 fn request_focus_status_authorization(center: *mut Object) -> Option<i64> {

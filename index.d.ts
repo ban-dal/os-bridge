@@ -4,9 +4,9 @@ export declare function getNotificationCapability(
   options?: NotificationDiagnosticsOptions | undefined | null,
 ): NotificationCapability
 
-export declare function getNotificationFocusStatus(
+export declare function getNotificationInterruptionLevel(
   options?: NotificationDiagnosticsOptions | undefined | null,
-): NotificationFocusStatus
+): NotificationInterruptionLevel
 
 export declare function getNotificationPermissionStatus(
   options?: NotificationDiagnosticsOptions | undefined | null,
@@ -17,7 +17,7 @@ export declare function getPermissionStatus(appUserModelId?: string | undefined 
 export interface NotificationCapability {
   canNotify: boolean
   permission: NotificationPermissionStatus
-  focusStatus: NotificationFocusStatus
+  interruptionLevel: NotificationInterruptionLevel
   reasons: Array<NotificationUnavailableReason>
 }
 
@@ -27,7 +27,7 @@ export interface NotificationDiagnosticsOptions {
   requestFocusAuthorization?: boolean
 }
 
-export type NotificationFocusStatus = 'active' | 'inactive' | 'unsupported' | 'unknown'
+export type NotificationInterruptionLevel = 'normal' | 'limited' | 'unsupported' | 'unknown'
 
 export type NotificationPermissionStatus =
   | 'granted'
@@ -45,6 +45,6 @@ export type NotificationUnavailableReason =
   | 'unsupported-platform'
   | 'unknown'
 
-export declare function requestNotificationPermission(
+export declare function requestMacNotificationPermission(
   options?: NotificationDiagnosticsOptions | undefined | null,
 ): NotificationPermissionStatus

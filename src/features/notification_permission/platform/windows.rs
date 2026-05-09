@@ -1,5 +1,5 @@
 use std::io::ErrorKind;
-use windows::UI::Shell::FocusSessionManager;
+use windows::UI::Notifications::{ToastNotificationManager, ToastNotificationMode};
 use winreg::enums::HKEY_CURRENT_USER;
 use winreg::RegKey;
 
@@ -11,8 +11,8 @@ pub fn get_permission_status(app_user_model_id: Option<String>) -> String {
   read_registry_setting(&app_id).unwrap_or_else(|| "unknown".to_string())
 }
 
-pub fn get_notification_focus_status(_request_focus_authorization: bool) -> String {
-  read_focus_session_status().unwrap_or_else(|| "unknown".to_string())
+pub fn get_notification_interruption_level(_request_focus_authorization: bool) -> String {
+  read_toast_notification_mode_level().unwrap_or_else(|| "unknown".to_string())
 }
 
 fn read_registry_setting(app_id: &str) -> Option<String> {
@@ -40,24 +40,21 @@ fn permission_from_enabled_value(enabled: Option<u32>) -> &'static str {
   }
 }
 
-fn read_focus_session_status() -> Option<String> {
-  let is_supported = FocusSessionManager::IsSupported().ok()?;
+fn read_toast_notification_mode_level() -> Option<String> {
+  let manager = ToastNotificationManager::GetDefault().ok()?;
+  let mode = manager.NotificationMode().ok()?;
 
-  if !is_supported {
-    return Some("unsupported".to_string());
+  Some(interruption_level_from_toast_notification_mode(mode)?.to_string())
+}
+
+fn interruption_level_from_toast_notification_mode(
+  mode: ToastNotificationMode,
+) -> Option<&'static str> {
+  match mode {
+    ToastNotificationMode::Unrestricted => Some("normal"),
+    ToastNotificationMode::PriorityOnly | ToastNotificationMode::AlarmsOnly => Some("limited"),
+    _ => None,
   }
-
-  let manager = FocusSessionManager::GetDefault().ok()?;
-  let is_focus_active = manager.IsFocusActive().ok()?;
-
-  Some(
-    if is_focus_active {
-      "active"
-    } else {
-      "inactive"
-    }
-    .to_string(),
-  )
 }
 
 #[cfg(test)]
@@ -79,5 +76,25 @@ mod tests {
   fn maps_enabled_registry_value_to_permission() {
     assert_eq!(permission_from_enabled_value(Some(0)), "denied");
     assert_eq!(permission_from_enabled_value(Some(1)), "granted");
+  }
+
+  #[test]
+  fn maps_toast_notification_mode_to_interruption_level() {
+    assert_eq!(
+      interruption_level_from_toast_notification_mode(ToastNotificationMode::Unrestricted),
+      Some("normal")
+    );
+    assert_eq!(
+      interruption_level_from_toast_notification_mode(ToastNotificationMode::PriorityOnly),
+      Some("limited")
+    );
+    assert_eq!(
+      interruption_level_from_toast_notification_mode(ToastNotificationMode::AlarmsOnly),
+      Some("limited")
+    );
+    assert_eq!(
+      interruption_level_from_toast_notification_mode(ToastNotificationMode(3)),
+      None
+    );
   }
 }

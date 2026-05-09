@@ -30,18 +30,18 @@ impl From<String> for NotificationPermissionStatus {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[napi(string_enum = "kebab-case")]
-pub enum NotificationFocusStatus {
-  Active,
-  Inactive,
+pub enum NotificationInterruptionLevel {
+  Normal,
+  Limited,
   Unsupported,
   Unknown,
 }
 
-impl From<String> for NotificationFocusStatus {
+impl From<String> for NotificationInterruptionLevel {
   fn from(status: String) -> Self {
     match status.as_str() {
-      "active" => Self::Active,
-      "inactive" => Self::Inactive,
+      "normal" => Self::Normal,
+      "limited" => Self::Limited,
       "unsupported" => Self::Unsupported,
       _ => Self::Unknown,
     }
@@ -70,7 +70,7 @@ pub struct NotificationDiagnosticsOptions {
 pub struct NotificationCapability {
   pub can_notify: bool,
   pub permission: NotificationPermissionStatus,
-  pub focus_status: NotificationFocusStatus,
+  pub interruption_level: NotificationInterruptionLevel,
   pub reasons: Vec<NotificationUnavailableReason>,
 }
 
@@ -88,8 +88,8 @@ pub fn get_notification_permission_status(
   get_permission_status(app_user_model_id)
 }
 
-#[napi(js_name = "requestNotificationPermission")]
-pub fn request_notification_permission(
+#[napi(js_name = "requestMacNotificationPermission")]
+pub fn request_mac_notification_permission(
   options: Option<NotificationDiagnosticsOptions>,
 ) -> NotificationPermissionStatus {
   let platform = resolve_platform(options.as_ref());
@@ -106,16 +106,16 @@ pub fn request_notification_permission(
   }
 }
 
-#[napi(js_name = "getNotificationFocusStatus")]
-pub fn get_notification_focus_status(
+#[napi(js_name = "getNotificationInterruptionLevel")]
+pub fn get_notification_interruption_level(
   options: Option<NotificationDiagnosticsOptions>,
-) -> NotificationFocusStatus {
+) -> NotificationInterruptionLevel {
   let platform = resolve_platform(options.as_ref());
 
   if !is_supported_notification_platform(&platform) {
-    NotificationFocusStatus::Unsupported
+    NotificationInterruptionLevel::Unsupported
   } else if platform == current_platform() {
-    features::notification_permission::get_notification_focus_status(
+    features::notification_permission::get_notification_interruption_level(
       options
         .as_ref()
         .and_then(|value| value.request_focus_authorization)
@@ -123,7 +123,7 @@ pub fn get_notification_focus_status(
     )
     .into()
   } else {
-    NotificationFocusStatus::Unknown
+    NotificationInterruptionLevel::Unknown
   }
 }
 
@@ -137,9 +137,9 @@ pub fn get_notification_capability(
       .as_ref()
       .and_then(|value| value.app_user_model_id.clone()),
   );
-  let focus_status = get_notification_focus_status(options.clone());
+  let interruption_level = get_notification_interruption_level(options.clone());
 
-  resolve_notification_capability(options.as_ref(), platform, permission, focus_status)
+  resolve_notification_capability(options.as_ref(), platform, permission, interruption_level)
 }
 
 impl Clone for NotificationDiagnosticsOptions {
@@ -156,7 +156,7 @@ fn resolve_notification_capability(
   options: Option<&NotificationDiagnosticsOptions>,
   platform: String,
   permission: NotificationPermissionStatus,
-  focus_status: NotificationFocusStatus,
+  interruption_level: NotificationInterruptionLevel,
 ) -> NotificationCapability {
   let mut reasons = Vec::new();
 
@@ -211,7 +211,7 @@ fn resolve_notification_capability(
   NotificationCapability {
     can_notify: reasons.is_empty(),
     permission,
-    focus_status,
+    interruption_level,
     reasons,
   }
 }
@@ -276,30 +276,30 @@ mod tests {
 
   fn resolve(
     permission: NotificationPermissionStatus,
-    focus_status: NotificationFocusStatus,
+    interruption_level: NotificationInterruptionLevel,
   ) -> NotificationCapability {
-    resolve_notification_capability(None, "darwin".to_string(), permission, focus_status)
+    resolve_notification_capability(None, "darwin".to_string(), permission, interruption_level)
   }
 
   #[test]
   fn resolves_capability_by_permission_status() {
     let granted = resolve(
       NotificationPermissionStatus::Granted,
-      NotificationFocusStatus::Inactive,
+      NotificationInterruptionLevel::Normal,
     );
     assert!(granted.can_notify);
     assert_eq!(granted.reasons, Vec::<NotificationUnavailableReason>::new());
 
     let limited = resolve(
       NotificationPermissionStatus::Limited,
-      NotificationFocusStatus::Inactive,
+      NotificationInterruptionLevel::Normal,
     );
     assert!(limited.can_notify);
     assert_eq!(limited.reasons, Vec::<NotificationUnavailableReason>::new());
 
     let denied = resolve(
       NotificationPermissionStatus::Denied,
-      NotificationFocusStatus::Inactive,
+      NotificationInterruptionLevel::Normal,
     );
     assert!(!denied.can_notify);
     assert_eq!(
@@ -309,7 +309,7 @@ mod tests {
 
     let not_determined = resolve(
       NotificationPermissionStatus::NotDetermined,
-      NotificationFocusStatus::Inactive,
+      NotificationInterruptionLevel::Normal,
     );
     assert!(!not_determined.can_notify);
     assert_eq!(
@@ -319,10 +319,10 @@ mod tests {
   }
 
   #[test]
-  fn does_not_treat_focus_active_as_unavailable() {
+  fn does_not_treat_limited_interruption_as_unavailable() {
     let capability = resolve(
       NotificationPermissionStatus::Granted,
-      NotificationFocusStatus::Active,
+      NotificationInterruptionLevel::Limited,
     );
 
     assert!(capability.can_notify);
@@ -338,7 +338,7 @@ mod tests {
       None,
       "linux".to_string(),
       NotificationPermissionStatus::Unsupported,
-      NotificationFocusStatus::Unsupported,
+      NotificationInterruptionLevel::Unsupported,
     );
 
     assert!(!capability.can_notify);
@@ -354,7 +354,7 @@ mod tests {
       None,
       "win32".to_string(),
       NotificationPermissionStatus::Denied,
-      NotificationFocusStatus::Active,
+      NotificationInterruptionLevel::Limited,
     );
 
     assert!(!capability.can_notify);
